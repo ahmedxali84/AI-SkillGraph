@@ -23,10 +23,10 @@ import { toast } from "sonner";
 
 export default function UploadPage() {
   const router = useRouter();
-  const { isLoggedIn, addProject, updateSkill, projects } = useStore();
+  const { isLoggedIn, addProject, updateSkill, syncProfile, projects } = useStore();
   const [file, setFile] = useState<File | null>(null);
   const [repoUrl, setRepoUrl] = useState("");
-  const [driveUrl, setDriveUrl] = useState("");
+  const [driveUrl] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeStep, setAnalyzeStep] = useState(0);
@@ -110,6 +110,9 @@ export default function UploadPage() {
       data.skillsDetected.forEach((skill: string) => {
         updateSkill(skill, Math.floor(Math.random() * 25) + 15);
       });
+
+      // Sync updated profile to backend (fire-and-forget)
+      syncProfile().catch(() => {});
 
       toast.success("Intelligence Audit Complete.");
     } catch (error: unknown) {

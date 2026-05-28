@@ -53,11 +53,8 @@ async def check_rate_limit(request: Request):
 def sanitize_input_text(text: str) -> str:
     if not text:
         return ""
-    # Strip HTML tags
-    clean = re.compile('<.*?>')
-    text = re.sub(clean, '', text)
-    # Strip dangerous characters to prevent injection/XSS
-    text = re.sub(r'[<>"\'%;()&+]', '', text)
+    # Secure against HTML/script tag injection
+    text = text.replace("<", "&lt;").replace(">", "&gt;")
     return text.strip()
 
 # --- DEEP GITHUB CRAWLER AND ANALYZER ---
@@ -398,6 +395,41 @@ async def get_genomap(request: GenomapRequest):
     # 2. Invoke our advanced, next-level Genome Architect AI Agent
     result = await analyze_genome_logic(project_name, repo_url, commits_list, raw_evidence)
     return result
+
+@app.post("/sync-profile")
+async def sync_profile(request: Dict[str, Any]):
+    username = request.get("username", "").lower()
+    if not username:
+        raise HTTPException(status_code=400, detail="Invalid username")
+    
+    profiles_file = "profiles.json"
+    profiles = {}
+    if os.path.exists(profiles_file):
+        try:
+            with open(profiles_file, "r") as f:
+                profiles = json.load(f)
+        except Exception:
+            pass
+    
+    profiles[username] = request
+    with open(profiles_file, "w") as f:
+        json.dump(profiles, f, indent=4)
+    
+    return {"status": "success", "message": f"Profile {username} synced successfully."}
+
+@app.get("/p/{username}")
+async def get_profile(username: str):
+    username_lower = username.lower()
+    profiles_file = "profiles.json"
+    if os.path.exists(profiles_file):
+        try:
+            with open(profiles_file, "r") as f:
+                profiles = json.load(f)
+            if username_lower in profiles:
+                return profiles[username_lower]
+        except Exception:
+            pass
+    raise HTTPException(status_code=404, detail="Profile not found")
 
 if __name__ == "__main__":
     import uvicorn
